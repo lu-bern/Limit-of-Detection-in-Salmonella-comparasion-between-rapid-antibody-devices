@@ -1,0 +1,311 @@
+---
+title: "lod_no_food"
+author: "guadalupe lulu bernal"
+date: "2023-10-06"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+# Set default options for all code chunks
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.align = 'center'
+)
+```
+
+## R Markdown
+
+## data analysis of LOD data food vs. no food with 2 strains for comparison, not a side by side comparison, food and no food trials were ran separate days with separate inoculum for each strain 
+
+```{r load-libraries}
+library(rstatix)
+library(ggpubr)
+library(broom)
+library(skimr)
+library(dplyr)
+library(scales)
+library(MASS)
+library(ggplot2)
+library(cowplot)
+library(gtable)
+require(MASS)
+require(scales)
+library(knitr)
+library(tidyverse)
+```
+
+## add color palette
+
+```{r color-palette}
+cbPalette <- c("#999999", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+cbPalette_bluegreen <- c("#56B4E9", "#009E73")
+```
+
+## load file
+
+```{r load-data}
+lod_no_food <- read.csv("two_column_no_food.csv")
+glimpse(lod_no_food)
+```
+
+## Create new column with log 10 transformed LOD
+
+```{r transform-data}
+### 
+# df_lod_no_food <- lod_no_food  %>% 
+#   group_by(device, food_matrix) %>%
+#   glimpse()
+
+df_lod_no_food <- lod_no_food  %>%
+  mutate(log10_lod = log10(lod))
+
+
+## use mutate here to change the labels so they are grammatically correct on the plot
+mutate_df_lod_no_food <- df_lod_no_food %>%
+  mutate(device = recode(device,
+                           "decision_point" = "Decision Point",
+                           "singlepath" = "SinglePath® Salmonella"))
+
+## Change the df to the new df so it doesnt keep overwriting the df and undoing your work
+mutate_df_lod_no_food <- mutate_df_lod_no_food %>%
+  mutate(strain = recode(strain,
+                           "S_Typhimurium" = "S. Typhimurium",
+                           "S_Enteritidis" = "S. Enteritidis"))
+
+mutate_df_lod_no_food <- mutate_df_lod_no_food %>%
+  mutate(food_matrix = recode(food_matrix,
+                           "absent " = "Absences of Food Matrix",
+                           "present" = "Presence of Food Matrix"))
+
+glimpse(mutate_df_lod_no_food)
+```
+
+## Exploratory plots
+
+```{r exploratory-plots-1}
+df_lod_no_food %>%
+ggplot(aes(x = device, y = lod)) +
+  geom_jitter(width = .2)
+```
+
+
+```{r exploratory-plots-2}
+df_lod_no_food %>%
+ggplot(aes(x = lod)) +
+  geom_histogram(bins =8) +
+  facet_grid(rows = vars(strain), scales = "free_y")
+```
+
+```{r exploratory-plots-3}
+##
+ggplot(df_lod_no_food, aes(y=lod, x=device, col = food_matrix)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, position = "dodge") +
+  stat_summary(aes(group=device), fun = mean, geom="line") +
+  geom_point(aes(group = device),size=2, position = position_jitterdodge()) +
+       scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) +
+     theme_bw() +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) 
+
+## strains to lod for food matrix present 
+ggplot(df_lod_no_food, aes(y=lod, x=strain, col = food_matrix)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, position = "dodge") +
+  stat_summary(aes(group=device), fun = mean, geom="line") +
+  geom_point(aes(group = device),size=2, position = position_jitterdodge()) +
+       scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) +
+     theme_bw() +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) 
+
+
+## 
+
+ggplot(df_lod_no_food, aes(y=lod, x=strain, col = food_matrix)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, position = "dodge") +
+  stat_summary(aes(group=device), fun = mean, geom="line") +
+  geom_point(aes(group = device),size=2, position = position_jitterdodge()) +
+       scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+           labels = trans_format("log10", math_format(10^.x))) +
+     theme_bw() +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) 
+
+##facet plots
+ggplot(df_lod_no_food, aes(y=lod, x=device, col = food_matrix)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_jitter(width=0.2, size = 2) +
+  facet_grid(cols = vars(strain)) +
+   theme_bw() +
+       scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) +
+     theme_bw() +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) 
+
+## faceted by strain vs food matrix
+ggplot(df_lod_no_food, aes(y=lod, x=food_matrix, col = device)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_jitter(width=0.2, size = 2) +
+  facet_grid(cols = vars(strain)) +
+   theme_bw() +
+       scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) +
+     theme_bw() +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) 
+
+##
+ggplot(df_lod_no_food, aes(y=lod, x=food_matrix, col = device)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  facet_grid(cols = vars(strain)) +
+   theme_bw() +
+       scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) +
+     theme_bw() +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) 
+
+```
+### log10_lod without log function
+
+```{r log10-plots}
+ggplot(df_lod_no_food, aes(y=log10_lod, x=device, col = food_matrix)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, position = "dodge") +
+  stat_summary(aes(group=device), fun = mean, geom="line") +
+  geom_point(aes(group = device),size=2, position = position_jitterdodge())
+```
+
+
+## Create data to only include one strain and changing labels for grammar/caps
+
+```{r filter-strains}
+## just S_Enteritidis
+mutate_s.typ_lod <- mutate_df_lod_no_food %>%
+    filter(strain == "S. Typhimurium")
+glimpse(mutate_s.typ_lod)
+
+## just S_Typhimurium
+mutate_s.ent_lod <- mutate_df_lod_no_food %>%
+  filter(strain == "S. Enteritidis")
+glimpse(mutate_s.ent_lod)
+```
+
+####
+
+```{r plot-typhimurium}
+p <- ggplot(mutate_s.typ_lod, aes(device, log10_lod, col = food_matrix)) +
+      scale_colour_manual(values=cbPalette_bluegreen) +
+  geom_jitter() +
+  facet_grid(cols = vars(food_matrix)) +
+  xlab("Device") +
+  ylab("LOD  CFU/mL")
+
+strains_typ <- ggplot(mutate_s.typ_lod, aes(y=log10_lod, x=device, col=device)) +
+        scale_colour_manual(values=cbPalette_bluegreen) +
+  geom_jitter() +
+  facet_grid(cols = vars(food_matrix)) +
+#scale_y_log10(
+#   breaks = scales::trans_breaks("log10", function(x) 10^x),
+ #  labels = scales::trans_format("log10", scales::math_format(10^.x))
+ #) +
+    theme_bw() +
+  theme(axis.text.x = element_text(size=10, angle=45, vjust=1, hjust=1)) +
+  theme(axis.text.y = element_text(size=10)) +
+  xlab("Device") +
+  ylab("log10 of Limit of Detection  (CFU/mL)") +
+   theme(axis.title = element_text(size = 10,
+                                  face = "bold")) +
+  theme(title = element_text(size = 12,
+                                  face = "bold")) +
+  theme(plot.title = element_text(lineheight=.8)) +
+      guides(color = guide_legend(title = "Device")) +
+      theme(axis.text.x=element_blank())
+strains_typ
+```
+
+###
+
+```{r plot-enteritidis}
+p <- ggplot(mutate_s.ent_lod, aes(device, log10_lod, col = food_matrix)) +
+      scale_colour_manual(values=cbPalette_bluegreen) +
+  geom_jitter() +
+  facet_grid(cols = vars(food_matrix)) +
+  xlab("Device") +
+  ylab("LOD  CFU/mL")
+
+strains_ent <- ggplot(mutate_s.ent_lod, aes(y=log10_lod, x=device, col=device)) +
+        scale_colour_manual(values=cbPalette_bluegreen) +
+  geom_jitter() +
+  facet_grid(cols = vars(food_matrix)) +
+#scale_y_log10(
+#   breaks = scales::trans_breaks("log10", function(x) 10^x),
+ #  labels = scales::trans_format("log10", scales::math_format(10^.x))
+ #) +
+    theme_bw() +
+  theme(axis.text.x = element_text(size=10, angle=45, vjust=1, hjust=1)) +
+  theme(axis.text.y = element_text(size=10)) +
+  xlab("Device") +
+  ylab("log10 of Limit of Detection  (CFU/mL)") +
+   theme(axis.title = element_text(size = 10,
+                                  face = "bold")) +
+  theme(title = element_text(size = 12,
+                                  face = "bold")) +
+  theme(plot.title = element_text(lineheight=.8)) +
+      guides(color = guide_legend(title = "Device")) +
+      theme(axis.text.x=element_blank())
+strains_ent
+
+
+
+```
+
+
+##### paired t-test (2-tailed) to compare device sensitivity for all strains. No sig difference 
+
+```{r summary-stats}
+df_lod_no_food %>% 
+  group_by(log10_lod) %>%
+  summarise(mean_log10_lod = mean(log10_lod, na.rm = TRUE))
+
+
+df_lod_no_food %>%  
+  group_by(device) %>%
+  summarise(mean_log10_lod = mean(log10_lod, na.rm = TRUE),
+            sd_log10_lod = sd(log10_lod, na.rm = TRUE),
+            n_log10_lod = n()) %>%
+  mutate(SE_log10_lod = sd_log10_lod / sqrt(n_log10_lod),
+         lower_95CI_t_dis = mean_log10_lod - qt(1 - (0.05 / 2), n_log10_lod - 1) * SE_log10_lod,
+         upper_95CI_t_dis = mean_log10_lod + qt(1 - (0.05 / 2), n_log10_lod - 1) * SE_log10_lod)
+```
+
+### paired t-test (2-tailed) to compare device sensitivity for per stain.  No sig difference 
+
+```{r lm-device}
+lm_device_lod<- lm(lod ~ device, data = df_lod_no_food)
+lm_device_lod
+
+
+summary(lm_device_lod)
+lm(formula = lod ~ device, data = df_lod_no_food)
+
+confint(lm_device_lod)
+```
+
+### paired t-test (2-tailed) to compare device sensitivity for per stain no food.  No sig difference 
+
+```{r summary-by-strain}
+df_lod_no_food %>%  
+  group_by(strain) %>%
+  summarise(mean_log10_lod = mean(log10_lod, na.rm = TRUE),
+            sd_log10_lod = sd(log10_lod, na.rm = TRUE),
+            n_log10_lod = n()) %>%
+  mutate(SE_log10_lod = sd_log10_lod / sqrt(n_log10_lod),
+         lower_95CI_t_dis = mean_log10_lod - qt(1 - (0.05 / 2), n_log10_lod - 1) * SE_log10_lod,
+         upper_95CI_t_dis = mean_log10_lod + qt(1 - (0.05 / 2), n_log10_lod - 1) * SE_log10_lod)
+
+```
+
