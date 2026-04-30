@@ -10,10 +10,7 @@ This project analyzes LOD data for food vs. no food conditions with 2 strains fo
 
 - `lod_no_food_github_human.Rmd` - Main R Markdown analysis file
 - `lod_no_food_github.Rmd` - Additional analysis file
-- `two_column_no_food.csv` - Data file (no food condition)
-- `two_column.csv` - Data file (with food)
-- `lod_trials_food_only.csv` - Food-only trial data
-- `decpoint_nofood.csv` - Decision Point device data
+
 
 ## Requirements
 
