@@ -1,0 +1,1217 @@
+---
+title: "lod_no_food"
+author: "guadalupe lulu bernal"
+date: "2023-10-06"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+## data analysis of lod data food vs. no food with 2 strains for comparison, not a side by side comparison, food and no food trials were ran separate days with separate inoculmm for each strain 
+
+```{r}
+library(rstatix)
+library(ggpubr)
+library(broom)
+library(skimr)
+library(dplyr)
+library(scales)
+library(MASS)
+library(ggplot2)
+library(cowplot)
+library(gtable)
+require(MASS)
+require(scales)
+library(knitr)
+library(tidyverse)
+```
+
+## add color palette
+
+```{r}
+cbPalette <- c("#999999", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+cbPalette_bluegreen <- c("#56B4E9", "#009E73")
+```
+
+## load file
+
+```{r}
+lod_no_food <- read.csv("two_column_no_food.csv")
+glimpse(lod_no_food)
+
+
+
+
+```
+
+##create new column with log 10 transformed lod
+
+```{r}
+### 
+# df_lod_no_food <- lod_no_food  %>% 
+#   group_by(device, food_matrix) %>%
+#   glimpse()
+
+df_lod_no_food <- lod_no_food  %>%
+  mutate(log10_lod = log10(lod))
+
+
+## use mutate here to change the labels so they are grammatically correct on the plot
+mutate_df_lod_no_food <- df_lod_no_food %>%
+  mutate(device = recode(device,
+                           "decision_point" = "Decision Point",
+                           "singlepath" = "SinglePath® Salmonella"))
+
+##change the df to the new df so it doesnt keep overwritting the df and undoing your work
+mutate_df_lod_no_food <- mutate_df_lod_no_food %>%
+  mutate(strain = recode(strain,
+                           "S_Typhimurium" = "S. Typhimurium",
+                           "S_Enteritidis" = "S. Enteritidis"))
+
+mutate_df_lod_no_food <- mutate_df_lod_no_food %>%
+  mutate(food_matrix = recode(food_matrix,
+                           "absent " = "Absences of Food Matrix",
+                           "present" = "Presence  of Food Matrix"))
+
+glimpse(mutate_df_lod_no_food)
+```
+
+##exploratory plots
+
+```{r}
+
+df_lod_no_food %>%
+ggplot(aes(x = device, y = lod)) +
+  geom_jitter(width = .2)
+
+
+##
+df_lod_no_food %>%
+ggplot(aes(x = lod)) +
+  geom_histogram(bins =8) +
+  facet_grid(rows = vars(strain), scales = "free_y")
+
+
+## log scale histrogramm
+
+df_lod_no_food %>%
+ggplot(aes(x = log10_lod)) +
+  geom_histogram(bins =8) +
+  facet_grid(strain + device + food_matrix ~., scales = "free_y")
+  
+
+##
+
+
+```
+
+```{r}
+##
+ggplot(df_lod_no_food, aes(y=lod, x=device, col = food_matrix)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, position = "dodge") +
+  stat_summary(aes(group=device), fun = mean, geom="line") +
+  geom_point(aes(group = device),size=2, position = position_jitterdodge()) +
+       scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) +
+     theme_bw() +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) 
+
+## strains to lod for food matrix present 
+ggplot(df_lod_no_food, aes(y=lod, x=strain, col = food_matrix)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, position = "dodge") +
+  stat_summary(aes(group=device), fun = mean, geom="line") +
+  geom_point(aes(group = device),size=2, position = position_jitterdodge()) +
+       scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) +
+     theme_bw() +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) 
+
+
+## 
+
+ggplot(df_lod_no_food, aes(y=lod, x=strain, col = food_matrix)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, position = "dodge") +
+  stat_summary(aes(group=device), fun = mean, geom="line") +
+  geom_point(aes(group = device),size=2, position = position_jitterdodge()) +
+       scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+           labels = trans_format("log10", math_format(10^.x))) +
+     theme_bw() +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) 
+
+##facet plots
+ggplot(df_lod_no_food, aes(y=lod, x=device, col = food_matrix)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_jitter(width=0.2, size = 2) +
+  facet_grid(cols = vars(strain)) +
+   theme_bw() +
+       scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) +
+     theme_bw() +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) 
+
+## faceted by strain vs food matrix
+ggplot(df_lod_no_food, aes(y=lod, x=food_matrix, col = device)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_jitter(width=0.2, size = 2) +
+  facet_grid(cols = vars(strain)) +
+   theme_bw() +
+       scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) +
+     theme_bw() +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) 
+
+##
+ggplot(df_lod_no_food, aes(y=lod, x=food_matrix, col = device)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  facet_grid(cols = vars(strain)) +
+   theme_bw() +
+       scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) +
+     theme_bw() +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) 
+
+```
+### log10_lod without log function
+```{r}
+###
+ggplot(df_lod_no_food, aes(y=log10_lod, x=device, col = food_matrix)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, position = "dodge") +
+  stat_summary(aes(group=device), fun = mean, geom="line") +
+  geom_point(aes(group = device),size=2, position = position_jitterdodge())
+
+## strains to lod for food maxtrix present 
+ggplot(df_lod_no_food, aes(y=log10_lod, x=strain, col = food_matrix)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, position = "dodge") +
+  stat_summary(aes(group=device), fun = mean, geom="line") +
+  geom_point(aes(group = device),size=2, position = position_jitterdodge())
+
+
+## 
+
+ggplot(df_lod_no_food, aes(y=log10_lod, x=strain, col = food_matrix)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, position = "dodge") +
+  stat_summary(aes(group=device), fun = mean, geom="line") +
+  geom_point(aes(group = device),size=2, position = position_jitterdodge())
+
+##facet plots
+ggplot(df_lod_no_food, aes(y=log10_lod, x=device, col = food_matrix)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_jitter(width=0.2, size = 2) +
+  facet_grid(cols = vars(strain)) +
+   theme_bw()
+
+## faceted by strain vs food matrix
+ggplot(df_lod_no_food, aes(y=log10_lod, x=food_matrix, col = device)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_jitter(width=0.2, size = 2) +
+  facet_grid(cols = vars(strain)) +
+   theme_bw()
+
+##
+ggplot(df_lod_no_food, aes(y=log10_lod, x=food_matrix, col = device)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  facet_grid(cols = vars(strain)) +
+   theme_bw()
+
+```
+
+
+
+## plotting food present vs. absent by strain
+
+```{r}
+
+
+p8 <- ggplot(mutate_df_lod_no_food, aes(y=lod, x=device, col = device)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_jitter(width=0.2, size = 2) +
+  facet_grid(cols = vars(food_matrix)) +
+   theme_bw() +
+       scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) +
+     theme_bw() +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) +
+  theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+  ggtitle("Comparasion of LOD and Devices With and WithoutFood Matrix")
+
+
+p9 <- ggplot(mutate_df_lod_no_food, aes(y=lod, x=food_matrix, col = device)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_jitter(width=0.2, size = 2) +
+  facet_grid(cols = vars(strain)) +
+   theme_bw() +
+       scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x))) +
+     theme_bw() +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x)))+
+  theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1))  +
+  ggtitle("Comparasion of LOD and Strains With and WithoutFood Matrix")
+
+p5 <- plot_grid(p8,  p9, labels = c("a","b")) 
+p5
+
+
+
+```
+
+## create data to only include one strain and changing labels for grammer/caps
+
+```{r}
+
+
+## just S_Enteritidis
+mutate_s.typ_lod <- mutate_df_lod_no_food %>%
+    filter(strain == "S. Typhimurium")
+glimpse(mutate_s.typ_lod)
+
+## just S_Typhimurium
+mutate_s.ent_lod <- mutate_df_lod_no_food %>%
+  filter(strain == "S. Enteritidis")
+glimpse(mutate_s.ent_lod)
+
+
+```
+
+```{}
+```
+
+```{r}
+p33 <- ggplot(mutate_s.ent_lod, aes(y=log10_lod, x=device)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_point() +
+  facet_grid(cols = vars(food_matrix)) +
+   theme_bw() +
+theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+  xlab("Device") +
+  ylab("LOD  CFU/mL")
+p33 
+
+
+
+p34 <- ggplot(mutate_s.ent_lod, aes(y=log10_lod, x=device)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_point() +
+   theme_bw() +
+theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+  xlab("Device") +
+  ylab("LOD  CFU/mL")
+p34
+
+p36 <- plot_grid(p34, p33) 
+p36
+
+p35 <- ggplot(mutate_s.ent_lod, aes(y=log10_lod, x=food_matrix)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_point() +
+   theme_bw() +
+theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+  xlab("Food Matrix  (Ground Beef)") +
+  ylab("LOD  Cfu/mL")
+p35
+
+p31 <- ggplot(mutate_s.typ_lod, aes(y=log10_lod, x=device)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_point() +
+  facet_grid(cols = vars(food_matrix)) +
+   theme_bw() +
+theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+  xlab("Device") +
+  ylab("LOD  CFU/mL")
+p31
+
+
+
+p32 <- ggplot(mutate_s.typ_lod, aes(y=log10_lod, x=device)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_point() +
+   theme_bw()+
+theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+  xlab("Device") +
+  ylab("LOD  CFU/mL")
+p32
+
+p37 <- plot_grid(p31, p32) 
+p37
+ 
+
+p38 <- plot_grid(p37, p36,
+                 nrow = 2,
+  labels = "AUTO",
+  label_size = 12,
+  align = "v"
+)
+p38
+
+ 
+
+
+```
+
+```{r}
+#compare_means(lod ~ device, data = mutate_df_lod_no_food, paired = TRUE)
+
+
+cbPalette_bluegreen <- c("#56B4E9", "#009E73")
+
+base <- ggpaired(mutate_df_lod_no_food, x = "device", y = "log10_lod",
+         color = "device", line.color = "gray", line.size = 0.4) +
+     scale_colour_manual(values=cbPalette_bluegreen)
+ #      scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+#              labels = trans_format("log10", math_format(10^.x))) +
+  theme(axis.text.x = element_text(size=10)) +
+  theme(axis.text.y = element_text(size=10)) + 
+  theme(axis.title.y = element_text(margin=margin(r=10))) +
+  xlab("Food Matrix") +
+  ylab("LOD  (CFU/mL)") +
+ labs(title = stringr::str_wrap("Figure x. Comparasion of Salmonella Detection by Strain With and Without the Presence of Food", width=55)) +
+  theme_bw() 
+
+base + facet_grid(food_matrix ~ strain) +
+      theme(axis.title.x = element_text(margin=margin(r=20))) +
+ #     scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+#              labels = trans_format("log10", math_format(10^.x))) +
+theme(axis.title = element_text(size = 10,
+                                  face = "bold")) +
+  theme(title = element_text(size = 12,
+                                  face = "bold")) +
+  theme(plot.title = element_text(lineheight=.8)) +
+  theme(legend.position="none") 
+theme_bw()
+
+
+##### flip y and x axis
+
+
+cbPalette_bluegreen <- c("#56B4E9", "#009E73")
+
+base <- ggpaired(mutate_df_lod_no_food, x = "device", y = "log10_lod", color = "device") +
+     scale_colour_manual(values=cbPalette_bluegreen)
+ #      scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+#              labels = trans_format("log10", math_format(10^.x))) +
+  theme(axis.text.x = element_text(size=10)) +
+  theme(axis.text.y = element_text(size=10)) + 
+  theme(axis.title.y = element_text(margin=margin(r=10))) +
+  xlab("Food Matrix") +
+  ylab("LOD  (CFU/mL)") +
+ labs(title = stringr::str_wrap("Figure x. Comparasion of Salmonella Detection by Strain With and Without the Presence of Food", width=55)) +
+  theme_bw()
+
+base + facet_grid(strain ~ food_matrix) +
+      theme(axis.title.x = element_text(margin=margin(r=20))) 
+  #    scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+  #            labels = trans_format("log10", math_format(10^.x))) +
+theme(axis.title = element_text(size = 10,
+                                  face = "bold")) +
+  theme(title = element_text(size = 12,
+                                  face = "bold")) +
+  theme(plot.title = element_text(lineheight=.8)) +
+  theme(legend.position="none") 
+```
+
+#### device vs lod separated by strain
+
+```{r}
+
+p <- ggplot(mutate_s.typ_lod, aes(device, log10_lod, col = food_matrix)) +
+      scale_colour_manual(values=cbPalette_bluegreen) +
+geom_crossbar() +
+  geom_point() +
+  facet_grid(cols = vars(food_matrix)) +
+  xlab("Device") +
+  ylab("LOD  CFU/mL")
+
+strains_typ <- ggplot(mutate_s.typ_lod, aes(y=log10_lod, x=device, col=device)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+        scale_colour_manual(values=cbPalette_bluegreen) +
+  geom_point() +
+  facet_grid(cols = vars(food_matrix)) +
+   theme_bw() +
+#scale_y_log10(
+#   breaks = scales::trans_breaks("log10", function(x) 10^x),
+ #  labels = scales::trans_format("log10", scales::math_format(10^.x))
+ #) +
+  xlab("Device") +
+  ylab("LOD  CFU/mL")
+strains_typ
+
+
+ 
+```
+####
+```{r}
+
+p <- ggplot(mutate_s.typ_lod, aes(device, log10_lod, col = food_matrix)) +
+      scale_colour_manual(values=cbPalette_bluegreen) +
+  geom_jitter() +
+  facet_grid(cols = vars(food_matrix)) +
+  xlab("Device") +
+  ylab("LOD  CFU/mL")
+
+strains_typ <- ggplot(mutate_s.typ_lod, aes(y=log10_lod, x=device, col=device)) +
+        scale_colour_manual(values=cbPalette_bluegreen) +
+  geom_jitter() +
+  facet_grid(cols = vars(food_matrix)) +
+#scale_y_log10(
+#   breaks = scales::trans_breaks("log10", function(x) 10^x),
+ #  labels = scales::trans_format("log10", scales::math_format(10^.x))
+ #) +
+    theme_bw() +
+  theme(axis.text.x = element_text(size=10, angle=45, vjust=1, hjust=1)) +
+  theme(axis.text.y = element_text(size=10)) +
+  xlab("Device") +
+  ylab("log10 of Limit of Detection  (CFU/mL)") +
+   theme(axis.title = element_text(size = 10,
+                                  face = "bold")) +
+  theme(title = element_text(size = 12,
+                                  face = "bold")) +
+  theme(plot.title = element_text(lineheight=.8)) +
+      guides(color = guide_legend(title = "Device")) +
+      theme(axis.text.x=element_blank())
+strains_typ
+```
+
+###
+
+```{r}
+
+p <- ggplot(mutate_s.ent_lod, aes(device, log10_lod, col = food_matrix)) +
+      scale_colour_manual(values=cbPalette_bluegreen) +
+  geom_jitter() +
+  facet_grid(cols = vars(food_matrix)) +
+  xlab("Device") +
+  ylab("LOD  CFU/mL")
+
+strains_ent <- ggplot(mutate_s.ent_lod, aes(y=log10_lod, x=device, col=device)) +
+        scale_colour_manual(values=cbPalette_bluegreen) +
+  geom_jitter() +
+  facet_grid(cols = vars(food_matrix)) +
+#scale_y_log10(
+#   breaks = scales::trans_breaks("log10", function(x) 10^x),
+ #  labels = scales::trans_format("log10", scales::math_format(10^.x))
+ #) +
+    theme_bw() +
+  theme(axis.text.x = element_text(size=10, angle=45, vjust=1, hjust=1)) +
+  theme(axis.text.y = element_text(size=10)) +
+  xlab("Device") +
+  ylab("log10 of Limit of Detection  (CFU/mL)") +
+   theme(axis.title = element_text(size = 10,
+                                  face = "bold")) +
+  theme(title = element_text(size = 12,
+                                  face = "bold")) +
+  theme(plot.title = element_text(lineheight=.8)) +
+      guides(color = guide_legend(title = "Device")) +
+      theme(axis.text.x=element_blank())
+strains_ent
+
+
+
+```
+
+
+
+
+
+
+
+###
+
+```{r}
+
+mutate_sum <- summarySE(mutate_df_lod_no_food, measurevar="log10_lod", groupvars=c("device","food_matrix"))
+mutate_sum
+
+# Error bars represent standard error of the mean
+ggplot(mutate_sum, aes(x=device, y=log10_lod, fill=food_matrix)) + 
+    geom_bar(position=position_dodge(), stat="identity") +
+    geom_errorbar(aes(ymin=log10_lod-se, ymax=log10_lod+se),
+                  width=.2,                    # Width of the error bars
+                  position=position_dodge(.9))
+
+
+# Use 95% confidence intervals instead of SEM
+ggplot(mutate_sum, aes(x=device, y=log10_lod, fill=food_matrix)) + 
+    geom_bar(position=position_dodge(), stat="identity") +
+    geom_errorbar(aes(ymin=log10_LOD-ci, ymax=log10_lod+ci),
+                  width=.2,                    # Width of the error bars
+                  position=position_dodge(.9))
+```
+
+
+
+## absent vs. present of food
+
+```{r}
+stat.test <- mutate_df_lod_no_food %>%
+  t_test(log10_lod ~ food_matrix) %>%
+  adjust_pvalue() %>%
+  add_significance()
+stat.test
+
+table_no_food_matrix <- kable(head(stat.test), format = "markdown", digits = 2)
+table_no_food_matrix
+
+# Box plots with p-values
+bxp <-  ggplot(mutate_s.typ_lod, aes(y=log10_lod, x=device)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_point() +
+  facet_grid(cols = vars(food_matrix)) 
+stat.test <- stat.test %>% add_xy_position(x = "device")
+  
+
+
+# Customize p-value labels using glue expression 
+# https://github.com/tidyverse/glue
+
+
+```
+
+#### downloading patterns to use oon ggplot <https://coolbutuseless.github.io/2020/04/01/introducing-ggpattern-pattern-fills-for-ggplot/>
+
+```{r}
+#install.packages("BiocManager")
+#BiocManager::install("ArrayTools")
+#install.packages("remotes")
+```
+
+#### 
+
+```{r}
+#remotes::install_github("coolbutuseless/ggpattern")
+
+```
+
+#### 
+
+```{r}
+
+```
+
+### 
+
+```{r}
+library(ggsignif)
+library(ggpattern)
+df <- data.frame(level = c("Absent", "Present"), outcome = c(2.3, 1.9))
+cbPalette_bluegreen <- c("#56B4E9", "#009E73")
+
+
+mutate_df_lod_no_food %>% 
+  ggplot(aes(x=device, y=log10_lod), pattern="stripe") +
+  geom_col_pattern(aes(pattern_angle=food_matrix, color=food_matrix, fill=food_matrix),
+                   pattern_fill="white", pattern_color="white", pattern_spacing=.05) +
+    geom_signif(comparisons = list(c("absent", "present")), 
+              map_signif_level=TRUE) +
+  labs(x="Device", y="LOD") +
+  facet_grid(~strain, switch = "x") +
+  theme_classic()
+###
+
+
+###
+gbar <- ggplot(mutate_df_lod_no_food,aes(x=device,y=log10_lod))+
+  geom_bar(stat="identity",aes(fill=strain))
+ 
+gbar+geom_signif(data=mutate_df_lod_no_food,stat="signif",position="identity",
+                 comparisons=list(c("absent","present")),map_signif_level = TRUE,annotations="***")
+
+
+
+```
+
+#### plots  using log transformation to fix the y axis, but didn't work. 
+
+```{r}
+
+s.typ <-ggplot(mutate_s.typ_lod, aes(x = device, y = lod, pattern = food_matrix, fill = device)) +
+geom_boxplot(aes(fill = device)) +
+ #  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+#              labels = trans_format("log10", math_format(10^.x))) +
+scale_fill_manual(name = "device", values = c("#56B4E9", "#009E73")) +
+geom_boxplot_pattern(position = position_dodge(preserve = "single"), color = "black", pattern_fill = "white", pattern_angle = 45, pattern_density = 0.1, pattern_spacing = 0.025, pattern_key_scale_factor = 0.6) +
+guides(pattern = guide_legend(override.aes = list(fill = "white")), fill = guide_legend(override.aes = list(pattern = "none"))) +
+   labs(title = stringr::str_wrap("S. Typhimurium", width=55))
+
+ #        scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+  #            labels = trans_format("log10", math_format(10^.x))) +
+  theme(axis.text.x = element_text(size=10)) +
+  theme(axis.text.y = element_text(size=10)) + 
+  theme(axis.title.y = element_text(margin=margin(r=10))) +
+  xlab("Device") +
+  ylab("LOD  (CFU/mL)") +
+  theme(axis.title = element_text(size = 10,
+                                  face = "bold")) +
+  theme(title = element_text(size = 12,
+                                  face = "bold")) +
+  theme(plot.title = element_text(lineheight=.8)) +
+  theme_bw()
+  
+s.typ
+
+
+
+s.ent <-ggplot(mutate_s.ent_lod, aes(x = device, y = lod, pattern = food_matrix, fill = device)) +
+geom_boxplot(aes(fill = device)) +
+ #    scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+  #            labels = trans_format("log10", math_format(10^.x))) +
+scale_fill_manual(name = "food_matrix", values = c("#56B4E9", "#009E73")) +
+    geom_jitter(width=0.2, size = 2) +
+geom_boxplot_pattern(position = position_dodge(preserve = "single"), color = "black", pattern_fill = "white", pattern_angle = 45, pattern_density = 0.1, pattern_spacing = 0.025, pattern_key_scale_factor = 0.6) +
+guides(pattern = guide_legend(override.aes = list(fill = "white")), fill = guide_legend(override.aes = list(pattern = "none"))) +
+     labs(title = stringr::str_wrap("S. Enteritidis", width=55))
+
+ #        scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+  #            labels = trans_format("log10", math_format(10^.x))) +
+  theme(axis.text.x = element_text(size=10)) +
+  theme(axis.text.y = element_text(size=10)) + 
+  theme(axis.title.y = element_text(margin=margin(r=10))) +
+  xlab("Device") +
+  ylab("LOD  (CFU/mL)") +
+  theme(axis.title = element_text(size = 10,
+                                  face = "bold")) +
+  theme(title = element_text(size = 12,
+                                  face = "bold")) +
+  theme(plot.title = element_text(lineheight=.8)) +
+  theme_bw()
+s.ent
+
+
+pattern_boxplot <- plot_grid(s.typ, s.ent,
+                 nrow = 2,
+  labels = "AUTO",
+  label_size = 12,
+  align = "v"
+)
+
+pattern_boxplot 
+
+```
+
+####
+
+```{r}
+
+stat.test <- mutate_s.ent_lod %>%
+  t_test(lod ~ food_matrix) %>%
+  add_significance()
+stat.test
+
+plot_strains_pvalue <- ggboxplot(
+  mutate_s.ent_lod, x = "device", y = "lod", 
+  ylab = "LOD CFU/mL", xlab ="Device", add = "jitter"
+  )
+
+#bystrains
+
+plot_strains_pvalue <- ggboxplot(
+  mutate_s.ent_lod, x = "device", y = "lod", 
+  ylab = "LOD CFU/mL", xlab ="Strain", add = "jitter"
+  ) 
+
+stat.test <- stat.test %>% add_xy_position(x = "device")
+plot_strains_pvalue + 
+  stat_pvalue_manual(stat.test, tip.length = 0) +
+  labs(subtitle = get_test_label(stat.test, detailed = TRUE))
+
+
+
+
+s.typ_plot <- ggplot(mutate_s.typ_lod, aes(y=log10_lod, x=device, color = device)) +
+     scale_colour_manual(values=cbPalette_bluegreen) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_jitter(width=0.2, size = 1.5) +
+  facet_grid(cols = vars(food_matrix))  +
+    theme_classic() +
+  theme(axis.text.x = element_text(size=10, angle=45, vjust=1, hjust=1)) +
+  theme(axis.text.y = element_text(size=10)) +
+  xlab("Device") +
+  ylab("log10 of Limit of Detection  (CFU/mL)") +
+   theme(axis.title = element_text(size = 10,
+                                  face = "bold")) +
+  theme(title = element_text(size = 12,
+                                  face = "bold")) +
+  theme(plot.title = element_text(lineheight=.8)) +
+      guides(color = guide_legend(title = "Device")) +
+      theme(axis.text.x=element_blank())
+s.typ_plot
+
+
+
+ggplot(mutate_s.typ_lod, aes(y = log10_lod, x = device)) +
+  geom_jitter(width=0.1, size = 2, alpha = 0.5, 
+              fill = "lightgreen", shape = 21) +
+  geom_crossbar(stat = "summary", fun.data = mean_cl_normal, 
+                width = 0.2, col="black", fill = "gray", 
+                alpha = 0.5) +
+  theme_bw() +
+  xlab("Device") +
+  ylab("log10 of Limit of Detection (CFU/mL)")
+
+
+s.ent_plot <- ggplot(mutate_s.ent_lod, aes(y=log10_lod, x=device, color = device)) +
+     scale_colour_manual(values=cbPalette_bluegreen) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_jitter(width=0.2, size = 1.5) +
+  facet_grid(cols = vars(food_matrix))  +
+    theme_classic() +
+  theme(axis.text.x = element_text(size=10, angle=45, vjust=1, hjust=1)) +
+  theme(axis.text.y = element_text(size=10)) +
+  xlab("Device") +
+  ylab("log10 of Limit of Detection  (CFU/mL)") +
+   theme(axis.title = element_text(size = 10,
+                                  face = "bold")) +
+  theme(title = element_text(size = 12,
+                                  face = "bold")) +
+  theme(plot.title = element_text(lineheight=.8)) +
+      guides(color = guide_legend(title = "Device")) +
+      theme(axis.text.x=element_blank())
+s.ent_plot
+```
+###
+```{r}
+s.ent_plot <- ggplot(mutate_s.ent_lod, aes(y=log10_lod, x=device, color = device)) +
+     scale_colour_manual(values=cbPalette_bluegreen) +
+  geom_jitter(width=0.2, size = 1.5) +
+  facet_grid(cols = vars(food_matrix))  +
+    theme_classic() +
+  theme(axis.text.x = element_text(size=10, angle=45, vjust=1, hjust=1)) +
+  theme(axis.text.y = element_text(size=10)) +
+  xlab("Device") +
+  ylab("log10 of Limit of Detection  (CFU/mL)") +
+   theme(axis.title = element_text(size = 10,
+                                  face = "bold")) +
+  theme(title = element_text(size = 12,
+                                  face = "bold")) +
+  theme(plot.title = element_text(lineheight=.8)) +
+      guides(color = guide_legend(title = "Device")) +
+      theme(axis.text.x=element_blank())
+s.ent_plot
+```
+
+
+
+#### Table
+
+```{r}
+
+# BUSINESS SCIENCE R TIPS ----
+# R-TIP 034 | mmtable2: ggplot2 syntax for tables ----
+#
+# 👉 For Weekly R-Tips, Sign Up Here: https://learn.business-science.io/r-tips-newsletter
+
+# LIBRARIES ----
+
+#remotes::install_github("ianmoran11/mmtable2")
+
+#library(mmtable2)
+#library(gt)
+#library(tidyverse)
+
+#mpg
+
+
+# 1.0 Data Transformation -----
+
+#data_wrangled <- mutate_df_lod_no_food %>%
+ #   group_by(manufacturer, cyl) %>%
+ #   summarise(across(.cols = c(cty, hwy), .fns = mean)) %>%
+  #  ungroup() %>%
+ #   pivot_longer(
+  #      cols = c(cty, hwy),
+ #       names_to = "fuel_economy_type",
+ #       values_to = "fuel_economy"
+ #   )
+
+#data_wrangled
+
+
+# 2.0 Table Main ----
+#main_table <- data_wrangled %>%
+#    mutate(fuel_economy = round(fuel_economy, 1)) %>%
+
+#    mmtable(cells = fuel_economy, table_name = "Fuel Economy") +
+
+    # Specify Headers
+#    header_top(manufacturer) +
+ #   header_left(cyl) +
+ #   header_left_top(fuel_economy_type) +
+#
+
+    # Specify formatting
+#    header_format(manufacturer, list(cell_text(transform = "capitalize"))) +
+#    header_format(fuel_economy_type, list(cell_text(transform = "uppercase"))) +
+#    table_format(
+#        locations = list(
+ #           cells_body(rows = c(2, 6))
+#        ),
+ #       style     = list(
+ #           cell_borders(sides = "top", color = "grey")
+ #       )
+  #  )
+
+# 3.0 Modify with GT Table ----
+#main_table %>%
+#    gt::tab_header(
+##        title = "Fuel Economy by Car Manufacturer",
+ #       subtitle = "Audi, VW, and Honda are leaders in Fuel Economy"
+#    )
+
+# LEARNING MORE ----
+
+# FREE MASTERCLASS
+# - 10 SECRETS TO BECOMING A DATA SCIENTIST
+#   https://learn.business-science.io/free-rtrack-masterclass
+
+
+
+```
+
+### separate charts for strains, first new data frames
+
+```{r}
+
+
+subset_s.t_a <- subset(mutate_df_lod_no_food, strain == 'S. Typhimurium' & food_matrix %in% c('Absent'))
+subset_s.t_p <- subset(mutate_df_lod_no_food, strain == 'S. Typhimurium' & food_matrix %in% c('Present'))
+
+
+subset_s.e_a <- subset(mutate_df_lod_no_food, strain == 'S. Enteritidis' & food_matrix %in% c('Absent'))
+
+subset_s.e_p <- subset(mutate_df_lod_no_food, strain == 'S. Enteritidis' & food_matrix %in% c('Present'))
+
+```
+
+### S. Typhimurium, devices vs. lod by absent/present
+
+#### 
+
+```{r}
+
+plot_sta <- ggplot(subset_s.t_a, aes(y=log10_lod, x=device)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_point() +
+  facet_grid(cols = vars(food_matrix)) +
+   theme_bw() +
+theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+  xlab("Device") +
+  ylab("log10 (LOD)  CFU/mL") 
+plot_sta
+```
+
+## sample data to see what the table looks like
+
+```{r}
+data(airquality)
+
+# creates a table of the first six (6) rows of "airquality"
+kable(head(airquality), format = "markdown", digits = 2)
+
+```
+
+## stats analysis <https://www.r-bloggers.com/2017/06/add-p-values-and-significance-levels-to-ggplots/>
+
+```{r}
+stat.test <- mutate_df_lod_no_food %>%
+  group_by(strain, food_matrix) %>%
+  t_test(log10_lod ~ device) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance()
+stat.test
+
+###
+stat.test <- mutate_df_lod_no_food %>%
+  group_by(strain, food_matrix) %>%
+  t_test(lod ~ device) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance()
+stat.test
+
+##
+
+
+#stat.test <- stat.test %>% add_xy_position(x = "device")
+#ggboxplot(
+#  mutate_df_lod_no_food, x = "device", y = "log10_lod", fill = "#00AFBB",
+#  facet = c("strain", "food_matrix")
+#  ) +
+#  stat_pvalue_manual(
+#    stat.test, bracket.nudge.y = -2, hide.ns = TRUE,
+#    label = "{p.adj}{p.adj.signif}"
+#    ) +
+#  background_grid(major = 'y', minor = "x")
+
+
+
+###
+compare_means(lod ~ device, data = mutate_df_lod_no_food, paired = TRUE)
+
+ggpaired(mutate_s.typ_lod, x = "food_matrix", y = "log10_lod",
+         color = "device", line.color = "gray", line.size = 0.4,
+         palette = "jco")+
+  stat_compare_means(paired = TRUE)
+
+
+#compare_means(lod ~ food_matrix, data = mutuate_s.ent_lod, paired = TRUE)
+
+##
+data(stat.test)
+
+# creates a table of the first six (6) rows of "airquality"
+kable(head(stat.test), format = "markdown", digits = 2)
+
+```
+
+## plots per strain
+
+```{r}
+
+## just S_Typhimurium
+ p1 <- ggplot(mutate_s.typ_lod, aes(y=log10_lod, x=device)) +
+    geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_jitter(width=0.2, size = 2) +
+  facet_grid(cols = vars(food_matrix)) +
+   theme_bw() +
+theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+  xlab("Device") +
+  ylab("LOD  CFU/mL") +
+ ggtitle("S. Typhimurium")
+
+p1
+ 
+## just S_Enteritidis
+
+ p2 <- ggplot(mutate_s.ent_lod, aes(y=log10_lod, x=device)) +
+    geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_jitter(width=0.2, size = 2) +
+  facet_grid(cols = vars(food_matrix)) +
+   theme_bw() +
+  xlab("Device") +
+  ylab("LOD  CFU/mL") +
+ ggtitle("S. Ent")
+
+ 
+
+
+ 
+p3 <- plot_grid(p1,  p2, labels = c("a","b"))
+p3
+
+### adding log scale for better y axis 
+
+require(scales)
+
+
+```
+#####
+
+```{r}
+
+
+
+## faceted by strain vs food matrix
+strain_food_1 <- ggplot(mutate_df_lod_no_food, aes(y=log10_lod, x=food_matrix, col = device)) +
+  geom_crossbar(stat="summary", fun.data = mean_cl_normal, width = 0.2, col="black", fill = "gray") +
+  geom_jitter(width=0.2, size = 2) +
+  facet_grid(cols = vars(strain)) +
+   theme_bw() +
+  theme(axis.text.x = element_text(size=10, angle=45, vjust=1, hjust=1)) +
+  theme(axis.text.y = element_text(size=10)) +
+  xlab("Food Matrix") +
+  ylab("LOD  CFU/mL") +
+   theme(axis.title = element_text(size = 10,
+                                  face = "bold")) +
+  theme(title = element_text(size = 12,
+                                  face = "bold")) +
+  theme(plot.title = element_text(lineheight=.8)) +
+ labs(title = stringr::str_wrap("Figure 2. Comparasion of Salmonella Detection by Strain With and Without The Presence of Food Matrix", width=55)) +
+  theme(legend.position="none")
+ggsave("Figure X. Comparasion of Salmonella Detection by Strain With and Without The Presence of Food Matrix.png")
+
+strain_food_1
+
+
+
+
+```
+
+#### 
+
+```{r}
+### trying to separate the previous plot into 4 graphs instead, 2 for device, 2 for food matrix. these are confusing to look at through 
+
+## separated by device vs food matrix
+ggplot(data = mutate_df_lod_no_food, aes(food_matrix, log10_lod, color = strain)) +
+  geom_boxplot() + 
+    theme_bw() +
+  theme(axis.text.x = element_text(size=10, angle=45, vjust=1, hjust=1)) +
+  theme(axis.text.y = element_text(size=10)) +
+  xlab("Food Matrix") +
+  ylab("LOD  CFU/mL") +
+   theme(axis.title = element_text(size = 10,
+                                  face = "bold")) +
+  theme(title = element_text(size = 12,
+                                  face = "bold")) +
+  theme(plot.title = element_text(lineheight=.8)) +
+  theme_bw() +
+  labs(title = "Figure x. Comparasion of Salmonella Detection by Strain With and Without The Presence of Food Matrix",
+       subtitle = "p = .XXX",
+       y = "food matrix", x = "log10(LOD) (cfu/mL)") + 
+  facet_wrap(~ food_matrix + strain)
+
+
+```
+
+```{r}
+##distribution of lod by device
+
+df_lod_no_food %>% 
+  group_by(log10_lod) %>%
+  summarise(mean_log10_lod = mean(log10_lod, na.rm = TRUE))
+
+
+df_lod_no_food %>%  
+  group_by(device) %>%
+  summarise(mean_log10_lod = mean(log10_lod, na.rm = TRUE),
+            sd_log10_lod = sd(log10_lod, na.rm = TRUE),
+            n_log10_lod = n()) %>%
+  mutate(SE_log10_lod = sd_log10_lod / sqrt(n_log10_lod),
+         lower_95CI_t_dis = mean_log10_lod - qt(1 - (0.05 / 2), n_log10_lod - 1) * SE_log10_lod,
+         upper_95CI_t_dis = mean_log10_lod + qt(1 - (0.05 / 2), n_log10_lod - 1) * SE_log10_lod)
+
+
+
+##
+
+```
+
+### week 7 from biostats making a linear model for prettier plots?
+
+```{r}
+
+lm_device_lod<- lm(lod ~ device, data = df_lod_no_food)
+lm_device_lod
+
+
+summary(lm_device_lod)
+lm(formula = lod ~ device, data = df_lod_no_food)
+
+confint(lm_device_lod)
+
+
+
+```
+
+### 
+
+#### log scales instead
+
+```{r}
+
+log_plot <- ggplot(df_lod_no_food, aes(x = device, y = lod)) + 
+  geom_boxplot()
+
+
+
+
+require(scales)
+log_plot + scale_y_continuous(trans = log2_trans(),
+    breaks = trans_breaks("log2", function(x) 2^x),
+    labels = trans_format("log2", math_format(2^.x)))
+```
+
+### 
+
+```{r}
+
+log_plot <- ggplot(df_lod_no_food, aes(x = device, y = lod)) + 
+  geom_boxplot()
+
+
+
+
+require(scales)
+log_plot + scale_y_continuous(trans = log2_trans(),
+    breaks = trans_breaks("log2", function(x) 2^x),
+    labels = trans_format("log2", math_format(2^.x)))
+```
+
+### 
+
+```{r}
+
+#plot_strains_pvalue <- ggboxplot(
+#  f_lod_food, x = "device", y = "lod", 
+ # ylab = "LOD CFU/mL", xlab ="Device", add = "jitter"
+ # )
+
+#stat.test <- stat.test %>% add_xy_position(x = "device")
+#plot_strains_pvalue + 
+ #stat_pvalue_manual(stat.test, tip.length = 0) +
+#labs(subtitle = get_test_label(stat.test, detailed = TRUE))
+
+
+```
+
+## stats analysis
+
+```{r}
+t.test(lod ~ food_matrix, data = df_lod_no_food)
+
+## lod vs. strain
+stat.test <- df_lod_no_food  %>% 
+  t_test(lod ~ strain, paired = TRUE) %>%
+  add_significance()
+stat.test
+
+
+
+
+```
+
+## 
+
+```{r}
+plot_pvalue <- ggboxplot(
+  mutuate_f_lod_no_food, x = "food_matrix", y = "lod", 
+  ylab = "LOD CFU/mL", xlab ="Strain", add = "jitter"
+  ) 
+
+
+stat.test <- stat.test %>% add_xy_position(x = "food_matrix")
+plot_pvalue + 
+ scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+              labels = trans_format("log10", math_format(10^.x)))
+
+
+
+
+```
+
+## 
+
+```{r}
+
+#dishonest_jitter <- ggplot(df_lod_no_food, aes(x = food_matrix, y = lod))  + 
+ # geom_jitter()+
+ # labs(title = "dishonest jitter")
+
+#honest_jitter <- ggplot(df_lod_no_food, aes(x = cyandensity, y = lod, color =  strain))  + 
+#  geom_jitter(height = 0, width = .2, show.legend = FALSE)+
+ # labs(title = "honest jitter")
+
+#plot_grid(dishonest_jitter, honest_jitter, labels = c("a","b"))
+
+
+
+```
