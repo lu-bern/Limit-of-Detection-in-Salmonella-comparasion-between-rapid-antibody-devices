@@ -3,8 +3,8 @@ This repository contains an R Markdown workflow for analyzing limit of detection
 
 LOD data from both devices were analyzed using a side by side experimental design. Each strain was tested in samples containing no food and then in food matrices (chicken rinsate and ground beef). Food and no-food experiments were conducted on separate days using independent inoculum and sample preparations for each strain to ensure experimental consistency. 
 
+<img width="548" height="1158" alt="thesis flowchart-Copy of LOD workflow drawio (1)" src="https://github.com/user-attachments/assets/1c0dc99a-6512-49e0-a847-031baef0aa42" />
 
-<img width="782" height="1653" alt="thesis flowchart-Copy of LOD workflow drawio" src="https://github.com/user-attachments/assets/b9ee2a37-df37-42e5-b0b6-e5ced151626c" />
 
 
 ## Files
